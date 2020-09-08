@@ -1,0 +1,1 @@
+cdef void load_book_file(dict book_dict, bytes book_file_name) except *
