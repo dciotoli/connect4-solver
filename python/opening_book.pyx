@@ -1,5 +1,5 @@
 from libc.stdint cimport uint64_t
-from libc.stdio cimport printf, FILE, fopen, fwrite, fclose
+from libc.stdio cimport printf, FILE, fopen, fwrite, fclose, fread, feof
 
 cimport board
 from minimax cimport alpha_beta_negamax_search
@@ -60,7 +60,7 @@ cdef void create_position_file(int depth, set book_set, bytes book_file_name, ui
     for key in sorted(book_set):
         if key > min_key:
             pos, mask = board.key3_to_pos_and_mask(key)
-            score = alpha_beta_negamax_search(pos, mask, depth, min_score, max_score)
+            score = alpha_beta_negamax_search(pos, mask, min_score, max_score)
             fwrite(&key, sizeof(key), 1, f)
             fwrite(&score, sizeof(score), 1, f)
             total_complete += 1
@@ -71,8 +71,71 @@ cdef void create_position_file(int depth, set book_set, bytes book_file_name, ui
     fclose(f)
 
 
-cdef load_book_file(book_dict, book_file_name):
-    pass
+cdef void load_book_file(dict book_dict, bytes book_file_name) except *:
+    cdef FILE * f
+    cdef int score
+    cdef uint64_t key
+
+    f = fopen(book_file_name, b'rb')
+
+    if not f:
+        raise FileNotFoundError('Cannot find file!')
+
+    # read key / score
+    while True:
+        # read key
+        fread(&key, sizeof(key), 1, f)
+        if feof(f):
+            break
+
+        # read score
+        fread(&score, sizeof(score), 1, f)
+        if feof(f):
+            break
+
+        # store in dict
+        book_dict[key] = score
+
+    fclose(f)
+
+
+cpdef test_load_book_file():
+    cdef dict book_dict
+    cdef bytes book_file_name
+    cdef uint64_t pos, mask, key3
+    cdef int min_score, max_score, bmin, bmax, score = 0
+
+    min_score = -(board.NUM_COLS * board.NUM_ROWS - (10 + 1)) // 2
+    max_score = (board.NUM_COLS * board.NUM_ROWS - 10) // 2
+
+    book_dict = {}
+    book_file_name = b'board.all_positions.6x7.10ply.dat'
+    game_str = '4635234144'
+
+    pos, mask = board.from_game_string(game_str)
+    key3 = board.key3(pos, mask)
+    score = alpha_beta_negamax_search(pos, mask, min_score, max_score)
+    printf(b'score was: %d\n', score)
+
+    load_book_file(book_dict, book_file_name)
+    printf(b'length of book: %d\n', len(book_dict))
+    printf(b'book dict was: %d\n', <int> book_dict.get(key3, -999))
+
+    assert score == book_dict.get(key3, -999)
+    printf(b'Scores were equal, test passed!\n')
+
+    bmin = min(book_dict.values())
+    bmax = max(book_dict.values())
+
+    printf(b'Book min: %d\nBook max: %d\n', bmin, bmax)
+
+
+
+cpdef test_explore(int depth):
+    cdef set final_set = set({})
+
+    explore(<uint64_t> 0, <uint64_t> 0, depth, set({}), final_set)
+    printf(b'Final set length: %d\n', len(final_set))
 
 
 cpdef generate_positions(int book_ply):

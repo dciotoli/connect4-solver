@@ -1,7 +1,7 @@
 from play import play_connect4
 from move_sorter import test_move_sorter
 from transposition_table import test_transposition_table
-from opening_book import generate_positions, test_key3
+from opening_book import generate_positions, test_key3, test_load_book_file, test_explore
 from board import from_game_string
 import argparse
 
@@ -12,18 +12,20 @@ def play(args):
     board_string = args.board_string
     config = {
         'board_string': board_string,
-        'aspirational_search': 1 if not args.disable_aspirational_search else 0
+        'aspirational_search': 1 if not args.disable_aspirational_search else 0,
+        'opening_book': b'board.all_positions.6x7.10ply.dat',
     }
     play_connect4(go_first=go_first, show_scores=show_scores, config=config)
 
 
 def run_test(args):
-    print('Made it!')
     test_transposition_table()
     test_move_sorter()
     pos, mask = from_game_string(args.board_string)
 
     test_key3(pos, mask)
+    test_explore(10)
+    test_load_book_file()
 
 
 def create_opening_book(args):

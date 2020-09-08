@@ -1,6 +1,6 @@
 from libc.stdio cimport printf
 from libc.stdint cimport uint64_t
-from minimax import score_move
+from minimax import score_move, init_opening_book
 cimport board
 import time
 
@@ -16,6 +16,7 @@ cpdef play_connect4(go_first=True, show_scores=True, config=None):
     cdef uint64_t pos, mask
     cdef int col, turn_count
     cdef list scores
+    cdef bytes opening_book
 
     if config is None:
         config = {}
@@ -23,6 +24,11 @@ cpdef play_connect4(go_first=True, show_scores=True, config=None):
     turn_count = 0
     aspirational_search = config.get('aspirational_search', 1)
     board_str = config.get('board_string', '4444413555533')
+    opening_book = config.get('opening_book')
+
+    if opening_book:
+        printf(b'Loading opening book file...\n')
+        init_opening_book(opening_book)
 
     if go_first:
         turn_count, pos, mask = 0, 0, 0
@@ -48,9 +54,10 @@ cpdef play_connect4(go_first=True, show_scores=True, config=None):
         else:
             # Evaluate possible moves and select
             t1 = time.time()
-            scores = [score_move(pos, mask, turn_count, i, aspirational_search) for i in POSSIBLE_MOVES]
+            scores = [score_move(pos, mask, i, aspirational_search) for i in POSSIBLE_MOVES]
             t2 = time.time()
 
+            # ToDo: Make printing of scores and time taken dynamic
             printf(b'%s', bytes(','.join([f'{x}' for x in scores]) + '\n', encoding='utf-8'))
             col = POSSIBLE_MOVES[scores.index(max(scores))]
             printf(b'%s', bytes('Col: {}, {:.4f} seconds elapsed.\n'.format(str(col), t2 - t1), encoding='utf-8'))
