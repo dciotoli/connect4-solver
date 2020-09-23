@@ -1,7 +1,8 @@
 from play import play_connect4
 from move_sorter import test_move_sorter
 from transposition_table import test_transposition_table
-from opening_book import generate_positions, test_key3, test_load_book_file, test_explore
+from opening_book import generate_positions, test_key3, test_load_book_file, test_explore, \
+    test_opening_book_single_position
 from board import from_game_string
 import argparse
 
@@ -25,7 +26,8 @@ def run_test(args):
 
     test_key3(pos, mask)
     test_explore(10)
-    test_load_book_file()
+    test_opening_book_single_position(args.board_string)
+    # test_load_book_file()
 
 
 def create_opening_book(args):

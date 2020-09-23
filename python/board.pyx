@@ -211,9 +211,13 @@ cdef (uint64_t, uint64_t) key3_to_pos_and_mask(uint64_t key3):
         if digit == 0:
             col += 1
         elif digit == 1:
+            # Move position column up by one
+            pos = (pos & ~column_mask(col)) | ((pos & column_mask(col)) << 1)
             pos |= pos + (bottom_mask & column_mask(col))
             mask |= mask + (bottom_mask & column_mask(col))
         elif digit == 2:
+            # Move position column up by one
+            pos = (pos & ~column_mask(col)) | ((pos & column_mask(col)) << 1)
             mask |= mask + (bottom_mask & column_mask(col))
     return pos, mask
 

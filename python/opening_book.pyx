@@ -64,7 +64,7 @@ cdef void create_position_file(int depth, set book_set, bytes book_file_name, ui
             fwrite(&key, sizeof(key), 1, f)
             fwrite(&score, sizeof(score), 1, f)
             total_complete += 1
-            if not total_complete % (num_to_do // 1000):
+            if not total_complete % (1 + (num_to_do // 1000)):
                 printf(b'%.2f%% complete (#%d)...\n',
                        (100 * <float> total_complete / <float> num_to_do), total_complete)
 
@@ -110,7 +110,7 @@ cpdef test_load_book_file():
 
     book_dict = {}
     book_file_name = b'board.all_positions.6x7.10ply.dat'
-    game_str = '4635234144'
+    game_str = '4444442333'
 
     pos, mask = board.from_game_string(game_str)
     key3 = board.key3(pos, mask)
@@ -122,7 +122,7 @@ cpdef test_load_book_file():
     printf(b'book dict was: %d\n', <int> book_dict.get(key3, -999))
 
     assert score == book_dict.get(key3, -999)
-    printf(b'Scores were equal, test passed!\n')
+    printf(b'Scores were equal: %d, test passed!\n', score)
 
     bmin = min(book_dict.values())
     bmax = max(book_dict.values())
@@ -158,6 +158,24 @@ cpdef generate_positions(int book_ply):
     create_position_file(book_ply, final_set, book_file_name, 0, 0)
 
 
+cpdef generate_single_position(str game_string):
+    cdef dict book_dict = {}
+    cdef set final_set = set({})
+    cdef bytes book_file_name
+    global num_visited
+
+    book_file_name = bytes(
+        f'board.position.{board.NUM_ROWS}x{board.NUM_COLS}.{game_string}.dat', encoding='utf-8')
+    num_visited = 1
+
+    position, mask = board.from_game_string(game_string)
+    final_set.add(board.key3(position, mask))
+
+    printf(b'Final set length: %d\n', len(final_set))
+
+    create_position_file(len(game_string), final_set, book_file_name, 0, 0)
+
+
 cpdef test_key3(uint64_t position, uint64_t mask):
     cdef uint64_t mirror_pos, mirror_mask
     cdef int i
@@ -182,8 +200,37 @@ cpdef test_key3(uint64_t position, uint64_t mask):
     assert board.key3(position, mask) == board.key3(mirror_pos, mirror_mask)
     printf(b'Success! Key3 of mirror images are equal...\n\n')
 
+    printf(b'Base 3 Key: \n')
     mirror_pos, mirror_mask = board.key3_to_pos_and_mask(board.key3(position, mask))
     board.print_board(mirror_pos, mirror_mask, 0, 1)
 
     assert board.key3(mirror_pos, mirror_mask) == board.key3(position, mask)
     printf(b'Success! Was able to translate key3 to pos/mask...\n')
+
+
+cpdef test_opening_book_single_position(str game_string):
+    cdef dict book_dict
+    cdef bytes book_file_name
+    cdef uint64_t pos, mask, key3
+    cdef int min_score, max_score, score = 0
+
+    book_dict = {}
+    min_score = -(board.NUM_COLS * board.NUM_ROWS - (len(game_string) + 1)) // 2
+    max_score = (board.NUM_COLS * board.NUM_ROWS - len(game_string)) // 2
+
+    generate_single_position(game_string)
+    book_file_name = bytes(
+        f'board.position.{board.NUM_ROWS}x{board.NUM_COLS}.{game_string}.dat', encoding='utf-8')
+
+    pos, mask = board.from_game_string(game_string)
+    key3 = board.key3(pos, mask)
+    score = alpha_beta_negamax_search(pos, mask, min_score, max_score)
+    printf(b'score was: %d\n', score)
+
+    load_book_file(book_dict, book_file_name)
+    printf(b'length of book: %d\n', len(book_dict))
+    printf(b'book dict was: %d\n', <int> book_dict.get(key3, -999))
+
+    assert score == book_dict.get(key3, -999)
+    printf(b'Scores were equal: %d, test passed!\n', score)
+
