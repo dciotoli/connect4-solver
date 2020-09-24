@@ -64,9 +64,8 @@ cdef void create_position_file(int depth, set book_set, bytes book_file_name, ui
             fwrite(&key, sizeof(key), 1, f)
             fwrite(&score, sizeof(score), 1, f)
             total_complete += 1
-            if not total_complete % (1 + (num_to_do // 1000)):
-                printf(b'%.2f%% complete (#%d)...\n',
-                       (100 * <float> total_complete / <float> num_to_do), total_complete)
+            printf(b'%.2f%% complete (#%d / %d)...\n',
+                   (100 * <float> total_complete / <float> num_to_do), total_complete, num_to_do)
 
     fclose(f)
 
